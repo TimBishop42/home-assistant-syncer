@@ -63,7 +63,11 @@ func (s *FinanceService) run(ctx context.Context) {
 				continue
 			}
 
-			homeResp, err := s.HomeClient.UpdateHomeEntityStatus(ctx, homeRequest)
+			requestContext, cancel := context.WithTimeout(ctx, time.Second*10)
+
+			defer cancel()
+
+			homeResp, err := s.HomeClient.UpdateHomeEntityStatus(requestContext, homeRequest)
 
 			if err != nil {
 				s.logger.Error("error calling home API",
@@ -71,15 +75,21 @@ func (s *FinanceService) run(ctx context.Context) {
 				continue
 			}
 
+			if err != nil {
+				fmt.Println("Error reading response body:", err)
+				return
+			}
+
 			s.logger.Info("successfully updated Home entity",
-				zap.Any("response", homeResp))
+				zap.Int("response cod:", homeResp.StatusCode),
+				zap.String("status", homeResp.Status))
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func getHomeRequest(resp *finance.Response) (*bytes.Reader, error) {
+func getHomeRequest(resp *finance.Response) (*bytes.Buffer, error) {
 	req := home.Request{
 		Status: resp.Status,
 		Attributes: home.Attributes{
@@ -94,7 +104,8 @@ func getHomeRequest(resp *finance.Response) (*bytes.Reader, error) {
 		return nil, err
 	}
 
-	body := bytes.NewReader(jsonData)
+	fmt.Println("Json payload: ", string(jsonData))
+	body := bytes.NewBuffer(jsonData)
 
 	return body, nil
 }
