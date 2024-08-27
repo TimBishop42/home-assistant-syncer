@@ -23,7 +23,7 @@ type FinanceService struct {
 func NewService(config *config.Config, logger *zap.Logger) *FinanceService {
 	return &FinanceService{
 		financeClient: finance.NewFinanceClient(config.FinanceTrackerUrl),
-		HomeClient:    home.NewHomeClient(config.HomeAssistantUrl),
+		HomeClient:    home.NewHomeClient(config.HomeAssistantUrl, config),
 		Config:        config,
 		logger:        logger,
 	}
@@ -72,7 +72,7 @@ func (s *FinanceService) run(ctx context.Context) {
 			}
 
 			s.logger.Info("successfully updated Home entity",
-				zap.String("responseCode", homeResp.Status))
+				zap.Any("response", homeResp))
 		case <-ctx.Done():
 			return
 		}
