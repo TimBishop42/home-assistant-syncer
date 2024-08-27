@@ -1,5 +1,5 @@
 # Start from the official Go image
-FROM golang:1.20-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -11,7 +11,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source from the current directory to the Working Directory inside the container
-COPY docker .
+COPY . .
 
 # Build the Go app
 RUN go build -o home-assistant-syncer ./cmd/home-assistant-syncer
