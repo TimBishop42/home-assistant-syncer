@@ -45,10 +45,12 @@ func (s *FinanceService) run(ctx context.Context) {
 	ticker := time.NewTicker(s.Config.RefreshPeriod)
 	defer ticker.Stop()
 
+	tickerContext := context.Background()
+
 	for {
 		select {
 		case <-ticker.C:
-			resp, err := s.financeClient.CallFinanceStore(ctx)
+			resp, err := s.financeClient.CallFinanceStore(tickerContext)
 			if err != nil {
 				s.logger.Error("error calling finance client.",
 					zap.Error(err))
@@ -63,11 +65,7 @@ func (s *FinanceService) run(ctx context.Context) {
 				continue
 			}
 
-			requestContext, cancel := context.WithTimeout(ctx, time.Second*10)
-
-			defer cancel()
-
-			homeResp, err := s.HomeClient.UpdateHomeEntityStatus(requestContext, homeRequest)
+			homeResp, err := s.HomeClient.UpdateHomeEntityStatus(tickerContext, homeRequest)
 
 			if err != nil {
 				s.logger.Error("error calling home API",
@@ -77,14 +75,12 @@ func (s *FinanceService) run(ctx context.Context) {
 
 			if err != nil {
 				fmt.Println("Error reading response body:", err)
-				return
+				continue
 			}
 
 			s.logger.Info("successfully updated Home entity",
-				zap.Int("response cod:", homeResp.StatusCode),
+				zap.Int("response code:", homeResp.StatusCode),
 				zap.String("status", homeResp.Status))
-		case <-ctx.Done():
-			return
 		}
 	}
 }
