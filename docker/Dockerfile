@@ -1,6 +1,10 @@
 # Start from the official Go image
 FROM golang:1.23-alpine AS builder
 
+# Set environment variables for Go to compile for x86_64 (AMD64) architecture
+ENV GOOS=linux
+ENV GOARCH=amd64
+
 # Set the Current Working Directory inside the container
 WORKDIR /app
 
