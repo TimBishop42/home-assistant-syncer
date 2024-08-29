@@ -13,11 +13,22 @@ import (
 	"time"
 )
 
+const (
+	budget_status_entity = "sensor.financial_status_raw"
+	last_month_spend     = "sensor.last_month_spend_raw"
+	current_month_spend  = "sensor.current_month_spend_raw"
+)
+
 type FinanceService struct {
 	financeClient *finance.Client
 	HomeClient    *home.Client
 	Config        *config.Config
 	logger        *zap.Logger
+}
+
+type RequestWrapper struct {
+	request *bytes.Buffer
+	entity  string
 }
 
 func NewService(config *config.Config, logger *zap.Logger) *FinanceService {
@@ -57,7 +68,8 @@ func (s *FinanceService) run(ctx context.Context) {
 				continue
 			}
 
-			homeRequest, err := getHomeRequest(resp)
+			//Now we need to push 3 entity status's to HA
+			allRequests, err := getHomeRequests(resp)
 
 			if err != nil {
 				s.logger.Error("error building request for home API",
@@ -65,33 +77,27 @@ func (s *FinanceService) run(ctx context.Context) {
 				continue
 			}
 
-			homeResp, err := s.HomeClient.UpdateHomeEntityStatus(tickerContext, homeRequest)
+			for _, r := range allRequests {
+				homeResp, err := s.HomeClient.UpdateHomeEntityStatus(tickerContext, r.request, r.entity)
 
-			if err != nil {
-				s.logger.Error("error calling home API",
-					zap.Error(err))
-				continue
+				if err != nil {
+					s.logger.Error("error calling home API",
+						zap.Error(err))
+					continue
+				}
+
+				s.logger.Info("successfully updated Home entity",
+					zap.Int("response_code:", homeResp.StatusCode),
+					zap.String("entity", r.entity))
 			}
 
-			if err != nil {
-				fmt.Println("Error reading response body:", err)
-				continue
-			}
-
-			s.logger.Info("successfully updated Home entity",
-				zap.Int("response code:", homeResp.StatusCode),
-				zap.String("status", homeResp.Status))
 		}
 	}
 }
 
-func getHomeRequest(resp *finance.Response) (*bytes.Buffer, error) {
-	req := home.Request{
-		Status: resp.Status,
-		Attributes: home.Attributes{
-			PriorMonthSpend:   resp.PriorMonth,
-			CurrentMonthSpend: resp.CurrentMonth,
-		},
+func getHomeRequest[T any](input T) (*bytes.Buffer, error) {
+	req := home.SimpleRequest{
+		Status: input,
 	}
 
 	jsonData, err := json.Marshal(req)
@@ -104,4 +110,36 @@ func getHomeRequest(resp *finance.Response) (*bytes.Buffer, error) {
 	body := bytes.NewBuffer(jsonData)
 
 	return body, nil
+}
+
+func getHomeRequests(finResp *finance.Response) ([]RequestWrapper, error) {
+	requests := make([]RequestWrapper, 3)
+	budgetReq, err := getHomeRequest[string](finResp.Status)
+	if err != nil {
+		return nil, err
+	}
+	requests[0] = RequestWrapper{
+		request: budgetReq,
+		entity:  budget_status_entity,
+	}
+
+	lastMonthReq, err := getHomeRequest[int](finResp.PriorMonth)
+	if err != nil {
+		return nil, err
+	}
+	requests[1] = RequestWrapper{
+		request: lastMonthReq,
+		entity:  last_month_spend,
+	}
+
+	currentMonthReq, err := getHomeRequest[int](finResp.CurrentMonth)
+	if err != nil {
+		return nil, err
+	}
+	requests[2] = RequestWrapper{
+		request: currentMonthReq,
+		entity:  current_month_spend,
+	}
+
+	return requests, nil
 }

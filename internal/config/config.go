@@ -17,7 +17,7 @@ type Config struct {
 func NewConfig(logger *zap.Logger) *Config {
 	return &Config{
 		FinanceTrackerUrl: getEnvString("FINANCE_URL", "http://localhost:8080/api/finance/get-home-data"),
-		HomeAssistantUrl:  getEnvString("HOME_URL", "http://192.168.0.73:8123/api/states/finance.data"),
+		HomeAssistantUrl:  getEnvString("HOME_URL", "http://192.168.0.73:8123/api/states"),
 		RefreshPeriod:     getEnvDuration("REFRESH_PERIOD", time.Second*10, logger),
 		HomeKey:           getEnvString("HOME_KEY", ""),
 		logger:            logger,

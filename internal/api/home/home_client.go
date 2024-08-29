@@ -24,6 +24,10 @@ type Attributes struct {
 	CurrentMonthSpend float32 `json:"current_month_spend"`
 }
 
+type SimpleRequest struct {
+	Status any `json:"state"`
+}
+
 func NewHomeClient(url string, config *config.Config) *Client {
 	return &Client{
 		httpClient: &http.Client{},
@@ -32,8 +36,10 @@ func NewHomeClient(url string, config *config.Config) *Client {
 	}
 }
 
-func (c *Client) UpdateHomeEntityStatus(ctx context.Context, body *bytes.Buffer) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiUrl, body)
+func (c *Client) UpdateHomeEntityStatus(ctx context.Context, body *bytes.Buffer, entity string) (*http.Response,
+	error) {
+	urlWithEntity := fmt.Sprintf("%s/%s", c.apiUrl, entity)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlWithEntity, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

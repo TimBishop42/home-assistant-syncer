@@ -13,9 +13,9 @@ type Client struct {
 }
 
 type Response struct {
-	Status       string  `json:"status"`
-	CurrentMonth float32 `json:"currentMonth"`
-	PriorMonth   float32 `json:"priorMonth"`
+	Status       string `json:"status"`
+	CurrentMonth int    `json:"currentMonth"`
+	PriorMonth   int    `json:"priorMonth"`
 }
 
 func NewFinanceClient(url string) *Client {
